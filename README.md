@@ -24,6 +24,11 @@
 
 ## 📦 自行打包
 
+安装 `pyinstaller`：
+```python
+pip install pyinstaller
+```
+
 请准备以下文件放在同一目录：
 - `net.py`（主程序）
 - `aria2c.exe`
