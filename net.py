@@ -3,6 +3,14 @@ import urllib.request
 import re
 import subprocess
 import os
+import sys
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 GITHUB_JSON_URL = "https://raw.githubusercontent.com/dotnet/core/refs/heads/main/release-notes/releases-index.json"
 
@@ -18,7 +26,7 @@ URL_TEMPLATES = [
 
 def main():
     output_file = "download.txt"
-    valid_versions = []
+    aria2c_path = resource_path("aria2c.exe")
     
     print("正在获取 .NET 版本信息...")
     try:
@@ -26,13 +34,14 @@ def main():
         with urllib.request.urlopen(req) as response:
             data = json.loads(response.read().decode())
             
+        valid_versions = []
         for release in data.get("releases-index", []):
             phase = release.get("support-phase", "").strip().lower()
             channel_version = release.get("channel-version", "").strip()
             latest_version = release.get("latest-release", "").strip()
             
             if phase in ["active", "maintenance"] and re.match(r'^\d+\.\d+\.\d+$', latest_version):
-                print(f"找到.Net {channel_version} 版本: {latest_version} (状态: {phase})")
+                print(f"找到 .Net {channel_version} 版本: {latest_version} (状态: {phase})")
                 valid_versions.append(latest_version)
                         
         if not valid_versions:
@@ -54,10 +63,10 @@ def main():
                         f.write(link + "\n")
                         f.write(f"  dir=./.Net {latest_version}\n")
             
-            print("\n启动 aria2c 下载...\n")
+            print("\n启动 aria2c 下载...")
             
             cmd = [
-                "aria2c", 
+                aria2c_path, 
                 "-i", output_file, 
                 "-j", "8", 
                 "-s", "16", 
@@ -73,7 +82,6 @@ def main():
                     print("所有文件下载成功！正在清理配置文件...")
                     if os.path.exists(output_file):
                         os.remove(output_file)
-                        print(f"已删除文件: {output_file}")
                 else:
                     print("\n" + "="*50)
                     print(f"aria2c 未能完全下载 (错误代码: {result.returncode})。")
@@ -81,13 +89,13 @@ def main():
             
             except KeyboardInterrupt:
                 print("\n" + "="*50)
-                print(f"[!] 已强行终止下载任务。")
+                print("已终止下载任务。")
                 
         else:
             print("\n用户取消，程序已退出。")
             
     except FileNotFoundError:
-        print("\n错误：未在系统环境变量中找到 'aria2c' 命令。")
+        print("\n错误：未找到 aria2c.exe")
     except Exception as e:
         print(f"\n请求或运行失败: {e}")
 
